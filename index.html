@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Binary Classifier - TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .metrics-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .metric-card {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            min-width: 200px;
+        }
+        .slider-container {
+            margin: 15px 0;
+        }
+        @media (max-width: 768px) {
+            .metrics-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Titanic Binary Classifier - TensorFlow.js</h1>
+    
+    <!-- Data Load Section -->
+    <section id="data-load">
+        <h2>1. Data Load</h2>
+        <p>Upload train.csv and test.csv files from Kaggle Titanic dataset</p>
+        <div>
+            <label for="train-file">Train CSV:</label>
+            <input type="file" id="train-file" accept=".csv">
+        </div>
+        <div>
+            <label for="test-file">Test CSV:</label>
+            <input type="file" id="test-file" accept=".csv">
+        </div>
+        <button id="load-data-btn">Load & Inspect Data</button>
+        <div id="data-preview"></div>
+    </section>
+
+    <!-- Preprocessing Section -->
+    <section id="preprocessing">
+        <h2>2. Preprocessing</h2>
+        <button id="preprocess-btn" disabled>Preprocess Data</button>
+        <div id="preprocessing-output"></div>
+    </section>
+
+    <!-- Model Section -->
+    <section id="model">
+        <h2>3. Model</h2>
+        <button id="create-model-btn" disabled>Create Model</button>
+        <div id="model-summary"></div>
+    </section>
+
+    <!-- Training Section -->
+    <section id="training">
+        <h2>4. Training</h2>
+        <button id="train-btn" disabled>Train Model</button>
+        <div id="training-status"></div>
+    </section>
+
+    <!-- Metrics Section -->
+    <section id="metrics">
+        <h2>5. Metrics & Evaluation</h2>
+        <button id="evaluate-btn" disabled>Evaluate Model</button>
+        <div class="slider-container">
+            <label for="threshold-slider">Classification Threshold:</label>
+            <input type="range" id="threshold-slider" min="0" max="1" step="0.01" value="0.5" disabled>
+            <span id="threshold-value">0.5</span>
+        </div>
+        <div id="metrics-output" class="metrics-container"></div>
+    </section>
+
+    <!-- Prediction Section -->
+    <section id="prediction">
+        <h2>6. Prediction & Export</h2>
+        <button id="predict-btn" disabled>Predict Test Data</button>
+        <button id="export-model-btn" disabled>Export Model</button>
+        <div id="prediction-output"></div>
+    </section>
+
+    <!-- Deployment Notes -->
+    <section id="deployment">
+        <h2>Deployment Notes</h2>
+        <p>To deploy this app on GitHub Pages:</p>
+        <ol>
+            <li>Create a public GitHub repository</li>
+            <li>Commit index.html and app.js files</li>
+            <li>Enable GitHub Pages in repository settings (Source: main branch, root folder)</li>
+            <li>Test the deployed URL (e.g., https://yourusername.github.io/repositoryname)</li>
+        </ol>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>
