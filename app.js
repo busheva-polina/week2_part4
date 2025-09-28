@@ -82,19 +82,77 @@ function readFile(file) {
     });
 }
 
-// Parse CSV text to array of objects
+// Robust CSV parser that handles commas in fields and quoted values
 function parseCSV(csvText) {
     const lines = csvText.trim().split('\n');
-    const headers = lines[0].split(',');
+    if (lines.length === 0) return [];
     
-    return lines.slice(1).map(line => {
-        const values = line.split(',');
+    // Extract headers
+    const headers = parseCSVLine(lines[0]);
+    
+    // Parse data rows
+    const data = [];
+    for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue; // Skip empty lines
+        
+        const values = parseCSVLine(lines[i]);
         const row = {};
+        
         headers.forEach((header, index) => {
-            row[header.trim()] = values[index] ? values[index].trim() : '';
+            // Use empty string for missing values, otherwise trim the value
+            row[header.trim()] = index < values.length ? values[index].trim() : '';
         });
-        return row;
-    });
+        
+        data.push(row);
+    }
+    
+    return data;
+}
+
+// Parse a single CSV line, handling quotes and commas within fields
+function parseCSVLine(line) {
+    const values = [];
+    let currentValue = '';
+    let inQuotes = false;
+    let quoteChar = null;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const nextChar = line[i + 1];
+        
+        if (inQuotes) {
+            if (char === quoteChar) {
+                // Check if this is an escaped quote (two consecutive quotes)
+                if (nextChar === quoteChar) {
+                    currentValue += quoteChar;
+                    i++; // Skip next quote
+                } else {
+                    // End of quoted field
+                    inQuotes = false;
+                    quoteChar = null;
+                }
+            } else {
+                currentValue += char;
+            }
+        } else {
+            if (char === '"' || char === "'") {
+                // Start of quoted field
+                inQuotes = true;
+                quoteChar = char;
+            } else if (char === ',') {
+                // End of field
+                values.push(currentValue);
+                currentValue = '';
+            } else {
+                currentValue += char;
+            }
+        }
+    }
+    
+    // Add the last value
+    values.push(currentValue);
+    
+    return values;
 }
 
 // Display data preview table
@@ -219,15 +277,15 @@ function createSurvivalVisualizations() {
     }));
     
     // Create visualizations
-    const surface = { name: 'Survival Rates', tab: 'Data Analysis' };
-    
-    tfvis.render.barchart(surface, 
-        [{ values: sexData, series: ['Survival Rate by Sex'] }],
+    tfvis.render.barchart(
+        { name: 'Survival Rates by Sex', tab: 'Data Analysis' },
+        [{ values: sexData, series: ['Survival Rate'] }],
         { xLabel: 'Sex', yLabel: 'Survival Rate (%)' }
     );
     
-    tfvis.render.barchart({ name: 'Survival by Passenger Class', tab: 'Data Analysis' }, 
-        [{ values: pclassData, series: ['Survival Rate by Pclass'] }],
+    tfvis.render.barchart(
+        { name: 'Survival by Passenger Class', tab: 'Data Analysis' }, 
+        [{ values: pclassData, series: ['Survival Rate'] }],
         { xLabel: 'Passenger Class', yLabel: 'Survival Rate (%)' }
     );
 }
@@ -319,7 +377,11 @@ function calculateStandardizationParams(data) {
     const params = {};
     
     NUMERICAL_COLUMNS.forEach(col => {
-        const values = data.map(row => parseFloat(row[col])).filter(val => !isNaN(val));
+        const values = data.map(row => {
+            const val = parseFloat(row[col]);
+            return isNaN(val) ? null : val;
+        }).filter(val => val !== null);
+        
         if (values.length > 0) {
             const mean = values.reduce((a, b) => a + b, 0) / values.length;
             const std = Math.sqrt(values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length);
