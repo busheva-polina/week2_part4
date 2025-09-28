@@ -16,6 +16,7 @@ let trainingHistory = null;
 let validationData = null;
 let validationLabels = null;
 let validationPredictions = null;
+let currentMetrics = null;
 
 // DOM elements
 const loadDataBtn = document.getElementById('load-data-btn');
@@ -87,7 +88,7 @@ function parseCSV(csvText) {
     const lines = csvText.trim().split('\n');
     if (lines.length === 0) return [];
     
-    // Extract headers
+    // Extract headers from first line
     const headers = parseCSVLine(lines[0]);
     
     // Parse data rows
@@ -120,21 +121,7 @@ function parseCSVLine(line) {
         const char = line[i];
         const nextChar = line[i + 1];
         
-        if (inQuotes) {
-            if (char === quoteChar) {
-                // Check if this is an escaped quote (two consecutive quotes)
-                if (nextChar === quoteChar) {
-                    currentValue += quoteChar;
-                    i++; // Skip next quote
-                } else {
-                    // End of quoted field
-                    inQuotes = false;
-                    quoteChar = null;
-                }
-            } else {
-                currentValue += char;
-            }
-        } else {
+        if (!inQuotes) {
             if (char === '"' || char === "'") {
                 // Start of quoted field
                 inQuotes = true;
@@ -143,6 +130,20 @@ function parseCSVLine(line) {
                 // End of field
                 values.push(currentValue);
                 currentValue = '';
+            } else {
+                currentValue += char;
+            }
+        } else {
+            // We are inside quotes
+            if (char === quoteChar) {
+                // Check if this is an escaped quote (two consecutive quotes)
+                if (nextChar === quoteChar) {
+                    currentValue += quoteChar;
+                    i++; // Skip next quote
+                } else {
+                    // End of quoted field
+                    inQuotes = false;
+                }
             } else {
                 currentValue += char;
             }
@@ -160,34 +161,41 @@ function displayDataPreview() {
     const previewDiv = document.getElementById('data-preview');
     previewDiv.innerHTML = '<h3>Data Preview</h3>';
     
+    if (!rawTrainData || rawTrainData.length === 0) {
+        previewDiv.innerHTML += '<p>No data loaded</p>';
+        return;
+    }
+    
     // Train data preview
     const trainTable = document.createElement('table');
     trainTable.innerHTML = `<caption>Train Data (First 5 rows)</caption>`;
     
-    // Create header
-    const headers = Object.keys(rawTrainData[0]);
-    let headerRow = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    // Create header - only show relevant columns for better display
+    const displayColumns = ['PassengerId', 'Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked'];
+    let headerRow = '<tr>' + displayColumns.map(h => `<th>${h}</th>`).join('') + '</tr>';
     trainTable.innerHTML += headerRow;
     
     // Create data rows
     rawTrainData.slice(0, 5).forEach(row => {
-        const dataRow = '<tr>' + headers.map(h => `<td>${row[h]}</td>`).join('') + '</tr>';
+        const dataRow = '<tr>' + displayColumns.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
         trainTable.innerHTML += dataRow;
     });
     
     previewDiv.appendChild(trainTable);
     
     // Test data preview
-    const testTable = document.createElement('table');
-    testTable.innerHTML = `<caption>Test Data (First 5 rows)</caption>`;
-    testTable.innerHTML += headerRow;
-    
-    rawTestData.slice(0, 5).forEach(row => {
-        const dataRow = '<tr>' + headers.map(h => `<td>${row[h]}</td>`).join('') + '</tr>';
-        testTable.innerHTML += dataRow;
-    });
-    
-    previewDiv.appendChild(testTable);
+    if (rawTestData && rawTestData.length > 0) {
+        const testTable = document.createElement('table');
+        testTable.innerHTML = `<caption>Test Data (First 5 rows)</caption>`;
+        testTable.innerHTML += headerRow;
+        
+        rawTestData.slice(0, 5).forEach(row => {
+            const dataRow = '<tr>' + displayColumns.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+            testTable.innerHTML += dataRow;
+        });
+        
+        previewDiv.appendChild(testTable);
+    }
 }
 
 // Display data statistics and visualizations
@@ -196,11 +204,11 @@ function displayDataStats() {
     
     // Calculate shapes
     const trainShape = `Train: ${rawTrainData.length} rows, ${Object.keys(rawTrainData[0]).length} columns`;
-    const testShape = `Test: ${rawTestData.length} rows, ${Object.keys(rawTestData[0]).length} columns`;
+    const testShape = rawTestData ? `Test: ${rawTestData.length} rows, ${Object.keys(rawTestData[0]).length} columns` : 'Test: No data';
     
     // Calculate missing values percentage
     const trainMissing = calculateMissingPercentage(rawTrainData);
-    const testMissing = calculateMissingPercentage(rawTestData);
+    const testMissing = rawTestData ? calculateMissingPercentage(rawTestData) : {};
     
     // Display shapes and missing values
     const statsDiv = document.createElement('div');
@@ -279,13 +287,13 @@ function createSurvivalVisualizations() {
     // Create visualizations
     tfvis.render.barchart(
         { name: 'Survival Rates by Sex', tab: 'Data Analysis' },
-        [{ values: sexData, series: ['Survival Rate'] }],
+        [{ values: sexData }],
         { xLabel: 'Sex', yLabel: 'Survival Rate (%)' }
     );
     
     tfvis.render.barchart(
         { name: 'Survival by Passenger Class', tab: 'Data Analysis' }, 
-        [{ values: pclassData, series: ['Survival Rate'] }],
+        [{ values: pclassData }],
         { xLabel: 'Passenger Class', yLabel: 'Survival Rate (%)' }
     );
 }
@@ -611,6 +619,9 @@ function createValidationSplit() {
 // Evaluate the model and compute metrics
 async function evaluateModel() {
     try {
+        const metricsDiv = document.getElementById('metrics-output');
+        metricsDiv.innerHTML = '<p>Evaluating model...</p>';
+        
         // Get predictions on validation set
         validationPredictions = model.predict(validationData);
         const probs = await validationPredictions.data();
@@ -624,6 +635,8 @@ async function evaluateModel() {
         
         // Update metrics with default threshold
         updateThreshold();
+        
+        metricsDiv.innerHTML = '<p>Evaluation complete! Use the slider to adjust classification threshold.</p>';
         
     } catch (error) {
         alert('Error evaluating model: ' + error.message);
@@ -718,26 +731,60 @@ async function computeMetrics(threshold) {
     const recall = tp / (tp + fn) || 0;
     const f1 = 2 * (precision * recall) / (precision + recall) || 0;
     
-    displayMetrics({ tp, fp, tn, fn, accuracy, precision, recall, f1 });
+    currentMetrics = { tp, fp, tn, fn, accuracy, precision, recall, f1, threshold };
+    displayMetrics(currentMetrics);
     plotConfusionMatrix({ tp, fp, tn, fn });
 }
 
-// Display metrics
+// Display metrics in a proper table format
 function displayMetrics(metrics) {
     const metricsDiv = document.getElementById('metrics-output');
     
     metricsDiv.innerHTML = `
-        <div class="metric-card">
-            <h3>Confusion Matrix</h3>
-            <p>TP: ${metrics.tp}, FP: ${metrics.fp}</p>
-            <p>FN: ${metrics.fn}, TN: ${metrics.tn}</p>
-        </div>
-        <div class="metric-card">
-            <h3>Performance Metrics</h3>
-            <p>Accuracy: ${metrics.accuracy.toFixed(3)}</p>
-            <p>Precision: ${metrics.precision.toFixed(3)}</p>
-            <p>Recall: ${metrics.recall.toFixed(3)}</p>
-            <p>F1-Score: ${metrics.f1.toFixed(3)}</p>
+        <div class="metrics-container">
+            <div class="metric-card">
+                <h3>Confusion Matrix</h3>
+                <table style="width: 100%; margin: 10px 0;">
+                    <tr>
+                        <th></th>
+                        <th>Predicted Negative</th>
+                        <th>Predicted Positive</th>
+                    </tr>
+                    <tr>
+                        <th>Actual Negative</th>
+                        <td>${metrics.tn} (TN)</td>
+                        <td>${metrics.fp} (FP)</td>
+                    </tr>
+                    <tr>
+                        <th>Actual Positive</th>
+                        <td>${metrics.fn} (FN)</td>
+                        <td>${metrics.tp} (TP)</td>
+                    </tr>
+                </table>
+                <p><strong>Threshold:</strong> ${metrics.threshold.toFixed(2)}</p>
+            </div>
+            <div class="metric-card">
+                <h3>Performance Metrics</h3>
+                <table style="width: 100%; margin: 10px 0;">
+                    <tr>
+                        <td><strong>Accuracy:</strong></td>
+                        <td>${metrics.accuracy.toFixed(4)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Precision:</strong></td>
+                        <td>${metrics.precision.toFixed(4)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Recall:</strong></td>
+                        <td>${metrics.recall.toFixed(4)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>F1-Score:</strong></td>
+                        <td>${metrics.f1.toFixed(4)}</td>
+                    </tr>
+                </table>
+                <p><strong>Total Samples:</strong> ${metrics.tp + metrics.fp + metrics.tn + metrics.fn}</p>
+            </div>
         </div>
     `;
 }
