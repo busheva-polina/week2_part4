@@ -1,153 +1,262 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titanic Binary Classifier - TensorFlow.js</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@latest"></script>
+    <title>MovieLens Two-Tower Recommender</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            line-height: 1.6;
+            background-color: #f5f5f5;
         }
-        section {
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button-group {
             margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        h1, h2 {
-            color: #333;
         }
         button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
+            padding: 10px 20px;
+            margin: 5px;
             border: none;
             border-radius: 4px;
+            background-color: #007cba;
+            color: white;
             cursor: pointer;
-            margin: 5px;
+            font-size: 14px;
         }
         button:hover {
-            background-color: #45a049;
+            background-color: #005a87;
         }
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        input[type="file"] {
+        .status {
             margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #e9ecef;
         }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 10px 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .metrics-container {
+        .charts {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
+            margin: 20px 0;
         }
-        .metric-card {
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-            min-width: 200px;
+        .chart-container {
+            flex: 1;
+            min-width: 300px;
         }
-        .slider-container {
+        canvas {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        .comparison-tables {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .table-container {
+            flex: 1;
+            min-width: 300px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .method-title {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #333;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007cba;
+            padding: 10px 15px;
             margin: 15px 0;
         }
-        @media (max-width: 768px) {
-            .metrics-container {
-                flex-direction: column;
-            }
+        .file-input-group {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .file-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .file-input-label {
+            min-width: 120px;
+            font-weight: bold;
+        }
+        .file-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .file-submit-btn {
+            background-color: #28a745;
+        }
+        .file-submit-btn:hover {
+            background-color: #218838;
+        }
+        .file-status {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        .upload-section {
+            margin: 20px 0;
         }
     </style>
 </head>
 <body>
-    <h1>Titanic Binary Classifier - TensorFlow.js</h1>
-    
-    <!-- Data Load Section -->
-    <section id="data-load">
-        <h2>1. Data Load</h2>
-        <p>Upload train.csv and test.csv files from Kaggle Titanic dataset</p>
-        <div>
-            <label for="train-file">Train CSV:</label>
-            <input type="file" id="train-file" accept=".csv">
+    <div class="container">
+        <h1>🎬 MovieLens Two-Tower Recommender</h1>
+        
+        <div class="info-box">
+            <strong>Usage Tips:</strong> 
+            <ul>
+                <li>Option 1: Use pre-loaded data by clicking "Load Data"</li>
+                <li>Option 2: Upload your own u.data and u.item files using the form below</li>
+                <li>Training takes 1-2 minutes (10 epochs)</li>
+                <li>Test shows recommendations for random user with 20+ ratings</li>
+                <li>Host on GitHub Pages by placing files in repository root</li>
+            </ul>
         </div>
-        <div>
-            <label for="test-file">Test CSV:</label>
-            <input type="file" id="test-file" accept=".csv">
+
+        <div class="upload-section">
+            <h3>📁 Upload Your Own Data Files</h3>
+            <div class="file-input-group">
+                <div class="file-input-row">
+                    <span class="file-input-label">u.data file:</span>
+                    <input type="file" id="uDataFile" class="file-input" accept=".data,.txt">
+                    <button id="submitUData" class="file-submit-btn">Submit u.data</button>
+                    <span id="uDataStatus" class="file-status">Not submitted</span>
+                </div>
+                <div class="file-input-row">
+                    <span class="file-input-label">u.item file:</span>
+                    <input type="file" id="uItemFile" class="file-input" accept=".item,.txt">
+                    <button id="submitUItem" class="file-submit-btn">Submit u.item</button>
+                    <span id="uItemStatus" class="file-status">Not submitted</span>
+                </div>
+            </div>
         </div>
-        <button id="load-data-btn">Load & Inspect Data</button>
-        <div id="data-preview"></div>
-    </section>
 
-    <!-- Preprocessing Section -->
-    <section id="preprocessing">
-        <h2>2. Preprocessing</h2>
-        <button id="preprocess-btn" disabled>Preprocess Data</button>
-        <div id="preprocessing-output"></div>
-    </section>
-
-    <!-- Model Section -->
-    <section id="model">
-        <h2>3. Model</h2>
-        <button id="create-model-btn" disabled>Create Model</button>
-        <div id="model-summary"></div>
-    </section>
-
-    <!-- Training Section -->
-    <section id="training">
-        <h2>4. Training</h2>
-        <button id="train-btn" disabled>Train Model</button>
-        <div id="training-status"></div>
-    </section>
-
-    <!-- Metrics Section -->
-    <section id="metrics">
-        <h2>5. Metrics & Evaluation</h2>
-        <button id="evaluate-btn" disabled>Evaluate Model</button>
-        <div class="slider-container">
-            <label for="threshold-slider">Classification Threshold:</label>
-            <input type="range" id="threshold-slider" min="0" max="1" step="0.01" value="0.5" disabled>
-            <span id="threshold-value">0.5</span>
+        <div class="button-group">
+            <button id="loadData">Load Pre-loaded Data</button>
+            <button id="trainBasic" disabled>Train Basic Model</button>
+            <button id="trainDL" disabled>Train Deep Learning Model</button>
+            <button id="test" disabled>Test Recommendations</button>
         </div>
-        <div id="metrics-output" class="metrics-container"></div>
-    </section>
 
-    <!-- Prediction Section -->
-    <section id="prediction">
-        <h2>6. Prediction & Export</h2>
-        <button id="predict-btn" disabled>Predict Test Data</button>
-        <button id="export-model-btn" disabled>Export Model</button>
-        <div id="prediction-output"></div>
-    </section>
+        <div id="status" class="status">Ready to load data...</div>
 
-    <!-- Deployment Notes -->
-    <section id="deployment">
-        <h2>Deployment Notes</h2>
-        <p>To deploy this app on GitHub Pages:</p>
-        <ol>
-            <li>Create a public GitHub repository</li>
-            <li>Commit index.html and app.js files</li>
-            <li>Enable GitHub Pages in repository settings (Source: main branch, root folder)</li>
-            <li>Test the deployed URL (e.g., https://yourusername.github.io/repositoryname)</li>
-        </ol>
-    </section>
+        <div class="charts">
+            <div class="chart-container">
+                <div class="method-title">Basic Model Training Loss</div>
+                <canvas id="lossChartBasic" width="400" height="300"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="method-title">Deep Learning Model Training Loss</div>
+                <canvas id="lossChartDL" width="400" height="300"></canvas>
+            </div>
+        </div>
 
+        <div class="charts">
+            <div class="chart-container">
+                <div class="method-title">Basic Model Item Embeddings</div>
+                <canvas id="projectionBasic" width="400" height="300"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="method-title">Deep Learning Model Item Embeddings</div>
+                <canvas id="projectionDL" width="400" height="300"></canvas>
+            </div>
+        </div>
+
+        <div class="comparison-tables">
+            <div class="table-container">
+                <div class="method-title">Basic Model (No Deep Learning)</div>
+                <div id="resultsBasic"></div>
+            </div>
+            <div class="table-container">
+                <div class="method-title">Deep Learning Model (with MLP)</div>
+                <div id="resultsDL"></div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="method-title">Comparison Between Methods</div>
+            <table id="comparisonTable">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Basic Model</th>
+                        <th>Deep Learning Model</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Architecture</td>
+                        <td>Simple Embeddings</td>
+                        <td>MLP with Hidden Layer</td>
+                    </tr>
+                    <tr>
+                        <td>Item Features</td>
+                        <td>Item ID only</td>
+                        <td>Item ID + Genres</td>
+                    </tr>
+                    <tr>
+                        <td>Model Complexity</td>
+                        <td>Low</td>
+                        <td>Higher</td>
+                    </tr>
+                    <tr>
+                        <td>Training Time</td>
+                        <td>Faster</td>
+                        <td>Slower</td>
+                    </tr>
+                    <tr>
+                        <td>Representation Power</td>
+                        <td>Basic</td>
+                        <td>Rich</td>
+                    </tr>
+                    <tr>
+                        <td>Genre Awareness</td>
+                        <td>No</td>
+                        <td>Yes</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="two-tower.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
